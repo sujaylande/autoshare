@@ -120,27 +120,43 @@ const updateCaption = async (req, res) => {
 
 const getAllPosts = async (req, res) => {
     try {
-        // Assuming req.user.id contains the ID of the authenticated user
-        const userId = req.user.id;
+        // Assuming req.user._id contains the ID of the authenticated user
+        const userId = req.user._id;
 
-        // Find the user by their ID and retrieve their posts array
-        const user = await User.findById(userId).populate('posts');
+        const page = parseInt(req.query.page, 10) || 1; // Default to 1 if not provided
+        const limit = parseInt(req.query.limit, 10) || 10; // Default to 10 if not provided
 
-        if (!user) {
+        const skip = (page - 1) * limit; // Calculate skip based on page and limit
+
+        // Find posts with pagination and populate the owner field
+        const posts = await Post.find({ owner: userId })
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        // Counting total posts of the user
+        const count = await Post.countDocuments({ owner: userId });
+
+        const totalPages = Math.ceil(count / limit);
+
+        if (posts.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'User not found'
+                message: 'No posts found',
             });
         }
 
         res.status(200).json({
             success: true,
-            posts: user.posts
+            posts,
+            totalPages,
+            currentPage: page,
         });
+
     } catch (err) {
         res.status(500).json({
             success: false,
-            message: err.message
+            message: 'Internal server error. Please try again later.',
         });
     }
 };
@@ -163,6 +179,13 @@ const searchPosts = async (req, res) => {
             destination: destination,
             date: new Date(date)
         });
+
+        if(posts.length === 0){
+            return res.status(404).json({
+                success: false,
+                message: 'No posts found'
+            });
+        }
 
         res.status(200).json({
             success: true,
