@@ -7,12 +7,14 @@ const register = async (req, res) => {
         const { name, email, password } = req.body;
 
         let user = await User.findOne({ email });
+
+        //if user already exists redirect to login page
         if (user) {
             return res
-                .status(400)
+                .status(200)
                 .json({
-                    success: false,
-                    message: 'User already exists'
+                    success: true,
+                    message: 'User already exists! Please login'
                 });
         }
 
@@ -52,7 +54,7 @@ const login = async (req, res) => {
 
         if (!user) {
             return res
-                .status(400)
+                .status(401)
                 .json({
                     success: false,
                     message: 'User not found!'
